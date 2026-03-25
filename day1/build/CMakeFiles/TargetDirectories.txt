@@ -1,0 +1,3 @@
+/home/liuyixuan/learning/cpp/mprpc/day1/build/CMakeFiles/CacheServer.dir
+/home/liuyixuan/learning/cpp/mprpc/day1/build/CMakeFiles/edit_cache.dir
+/home/liuyixuan/learning/cpp/mprpc/day1/build/CMakeFiles/rebuild_cache.dir
