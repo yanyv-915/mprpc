@@ -9,6 +9,14 @@ private:
         VectorData data;
     };
     
+    struct PendingRecord {
+        string key;
+        VectorData vec;
+    };
+
+    vector<PendingRecord> write_buffer;
+    const size_t buffer_threshold=1000;
+
     size_t capacity;
     std::list<Node> cacheList;
     std::unordered_map<std::string,std::list<Node>::iterator>cacheMap;
@@ -20,6 +28,7 @@ private:
     int global_dim=-1;
 
     static std::filesystem::path defaultAofPath();
+    void flushBuffer();
     VectorData parseVector(string vecStr);
     void exe_set(const string& request);
     void exe_get(const string& request,const int& client_fd);

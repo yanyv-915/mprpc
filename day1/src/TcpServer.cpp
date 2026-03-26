@@ -37,7 +37,7 @@ bool Tcp::init()
         system("ls -l /proc/self/fd"); 
         return false;
     }
-    if (listen(listen_fd, 5) < 0)
+    if (listen(listen_fd, 100) < 0)
     {
         perror("listen");
         return false;

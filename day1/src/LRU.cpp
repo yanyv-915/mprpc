@@ -12,6 +12,16 @@ std::filesystem::path VectorCache::defaultAofPath() {
     return fs::exists(p1) ? p1 : p2;
 }
 
+void VectorCache::flushBuffer(){
+    if(write_buffer.empty()) return;
+    for(const auto& rec:write_buffer){
+        IO::writeString(aof_file,rec.key);
+        IO::writeVec(aof_file,rec.vec);
+    }
+    aof_file.flush();
+    write_buffer.clear();
+}
+
 VectorCache::VectorCache(size_t cap):capacity(cap){
     aof_path = defaultAofPath();
     aof_file.open(aof_path, std::ios::out | std::ios::app | std::ios::binary);
@@ -24,6 +34,7 @@ VectorCache::VectorCache(size_t cap):capacity(cap){
 }
 
 VectorCache::~VectorCache(){
+    flushBuffer();
     if(aof_file.is_open()){
         aof_file.close();
     }
@@ -141,17 +152,20 @@ void VectorCache::exe_get(const string& rawRequest,const int& client_fd){
 }
 
 string VectorCache::exe_search(const string& q){
-    if(q.size()<7) return "ERROR";
+    if(q.size()<7) return "ERROR\n";
     size_t pos=q.find(' ');
-    if(pos==string::npos) return "ERROR";
+    if(pos==string::npos) return "ERROR\n";
     while(pos<q.size()&&q[pos]==' ') { pos++; }
-    if(pos>=q.size()) return "ERROR";
+    if(pos>=q.size()) return "ERROR\n";
     string real=q.substr(pos);
     VectorData queryVec=parseVector(real);
+    if(!checkDim(queryVec)){
+        return "错误：维度不匹配！期望 "+std::to_string(global_dim)+" 维!\n";
+    }
     if(global_dim!=-1&&queryVec.size()!=(size_t)global_dim){
         return "ERROR: Query dimension mismatch\n";
     }
-    string bestKey="None";
+    string bestKey="None\n";
     float minDist=std::numeric_limits<float>::max();
 
     std::lock_guard<mutex> lk(l_mtx);
@@ -194,12 +208,15 @@ void VectorCache::saveToBin(const string& request){
         VectorData vec=parseVector(sVec);
         if(checkDim(vec)){
             //cout << "[DEBUG] Writing Key: '" << key << "' Length: " << key.size() << endl;
-            IO::writeString(aof_file,key);
-            IO::writeVec(aof_file,vec);
-            if (!aof_file.good()) {
-                std::cerr << "AOF 写入失败，流状态异常: " << aof_path << std::endl;
-                return;
+            write_buffer.push_back({key,vec});
+            if(write_buffer.size()>=buffer_threshold){
+                flushBuffer();
+                if (!aof_file.good()) {
+                    std::cerr << "AOF 写入失败，流状态异常: " << aof_path << std::endl;
+                    return;
+                }
             }
+            
             aof_file.flush();
         }
     }
