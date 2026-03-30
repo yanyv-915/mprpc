@@ -1,5 +1,5 @@
 #include "../include/ThreadPool.h"
-ThreadPool::ThreadPool(int threads) : stop(false)
+ThreadPool::ThreadPool(size_t threads) : stop(false)
 {
     for (size_t i = 0; i < threads; i++)
     {

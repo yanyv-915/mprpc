@@ -49,8 +49,8 @@ int main(int argc, char* argv[]) {
         if (count <= 5) {
             cout << "[" << count << "] Key: " << key 
                  << " | Dim: " << vec.size() << " | Data: [";
-            for (int i = 0; i < min((int)vec.size(), 3); ++i) {
-                cout << vec[i] << (i == min((int)vec.size(), 3) - 1 ? "" : ", ");
+            for (size_t i = 0; i < min((size_t)vec.size(), (size_t)3); ++i) {
+                cout << vec[i] << (i == min((size_t)vec.size(), (size_t)3) - 1 ? "" : ", ");
             }
             if (vec.size() > 3) cout << "...";
             cout << "]" << endl;

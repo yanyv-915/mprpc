@@ -22,7 +22,7 @@ private:
     atomic<bool> stop;
 
 public:
-    ThreadPool(int threads=thread::hardware_concurrency());
+    ThreadPool(size_t threads=thread::hardware_concurrency());
     ~ThreadPool();
     template<typename F>
     void enqueue(F&& f);

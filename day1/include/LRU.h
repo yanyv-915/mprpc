@@ -22,18 +22,18 @@ private:
 
     thread persist_thread;
     mutex buffer_mtx;
+    std::shared_mutex search_mtx;
     std::condition_variable cv;
     atomic<bool>stop_thread=false;
     void backgroundWrite();
     void asyncPush(const string& key,const VectorData& vec);
 
-    vector<PendingRecord> write_buffer;
     const size_t buffer_threshold=5000;
 
     size_t capacity;
     std::list<Node> cacheList;
     std::unordered_map<std::string,std::list<Node>::iterator>cacheMap;
-    mutex l_mtx;
+    mutex lru_mtx;
     mutex aof_mtx;
     std::atomic<bool>is_loading{true};
     std::ofstream aof_file;
@@ -41,7 +41,6 @@ private:
     int global_dim=-1;
 
     static std::filesystem::path defaultAofPath();
-    void flushBuffer();
     VectorData parseVector(string vecStr);
     void exe_set(const string& request);
     void exe_get(const string& request,const int& client_fd);

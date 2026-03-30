@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = 
+CXX_INCLUDES = -I/home/liuyixuan/miniconda3/envs/faiss_lab/include
 
-CXX_FLAGS =  -fsanitize=address -g -g
+CXX_FLAGS =  -fsanitize=address -g -g -std=gnu++17 -O3 -fopenmp -Wall
 

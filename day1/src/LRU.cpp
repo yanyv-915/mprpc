@@ -12,16 +12,6 @@ std::filesystem::path VectorCache::defaultAofPath() {
     return fs::exists(p1) ? p1 : p2;
 }
 
-void VectorCache::flushBuffer(){
-    if(write_buffer.empty()) return;
-    for(const auto& rec:write_buffer){
-        IO::writeString(aof_file,rec.key);
-        IO::writeVec(aof_file,rec.vec);
-    }
-    aof_file.flush();
-    write_buffer.clear();
-}
-
 VectorCache::VectorCache(size_t cap):capacity(cap){
     aof_path = defaultAofPath();
     aof_file.open(aof_path, std::ios::out | std::ios::app | std::ios::binary);
@@ -49,14 +39,14 @@ VectorCache::~VectorCache(){
 }
 
 bool VectorCache::checkDim(const VectorData& vec){
-    int current_dim = vec.size();
+    size_t current_dim = vec.size();
     if (global_dim == -1)
     {
         // 第一次存入数据，由第一条数据决定整个系统的维度
         global_dim = current_dim;
         cout << "系统维度已确定为: " << global_dim << endl;
     }
-    else if (current_dim != global_dim)
+    else if (current_dim != (size_t)global_dim)
     {
         // 如果后续数据维度不对，拒绝写入
         std::cerr << "错误：维度不匹配！期望 " << global_dim << " 维，实际收到 " << current_dim << " 维。" << endl;
@@ -183,7 +173,7 @@ void VectorCache::exe_get(const string& rawRequest,const int& client_fd){
         }
         else{
             reply="";
-            for(int i=0;i<out.size();i++){
+            for(size_t i=0;i<out.size();i++){
                 reply+=std::to_string(out[i])+" ";
             }
         }
@@ -210,7 +200,7 @@ string VectorCache::exe_search(const string& q){
     string bestKey="None\n";
     float minDist=std::numeric_limits<float>::max();
 
-    std::lock_guard<mutex> lk(l_mtx);
+    std::shared_lock<std::shared_mutex> lk(search_mtx);
     for(auto const& [key,node]:cacheMap){
         float dist=calL2(queryVec,node->data);
         if(dist<minDist){
@@ -235,10 +225,10 @@ void VectorCache::saveToBin(const string& request){
             std::cerr << "文件写入流状态异常！错误代码: " << strerror(errno) << std::endl;
         }
         if(request.size()<4) return;
-        int pos1=3;
+        size_t pos1=3;
         while(pos1<request.size()&&request[pos1]==' ') { pos1++; }
         if(pos1>=request.size()) return;
-        int pos2=request.find_first_of(' ',pos1);
+        size_t pos2=request.find_first_of(' ',pos1);
         if (pos2 == string::npos) return;
         string key=request.substr(pos1,pos2-pos1);
         //cout << "[DEBUG] Binary write successful for key: " << key << endl;
@@ -256,7 +246,7 @@ void VectorCache::saveToBin(const string& request){
 }
 
 bool VectorCache::get(const std::string& key,VectorData& outData){
-    std::unique_lock<mutex> lk(l_mtx);
+    std::unique_lock<mutex> lk(lru_mtx);
     auto it=cacheMap.find(key);
     if(it==cacheMap.end()) return false;
     auto listIt=it->second;
@@ -267,7 +257,7 @@ bool VectorCache::get(const std::string& key,VectorData& outData){
 }
 
 void VectorCache::put(const std::string& key,const VectorData& data){
-    std::unique_lock<mutex> lk(l_mtx);
+    std::unique_lock<mutex> lk(lru_mtx);
     //std::cout << "[DEBUG] Putting Key: " << key << " | Dim: " << data.size() << std::endl;
     auto it=cacheMap.find(key);
     if(it!=cacheMap.end()){

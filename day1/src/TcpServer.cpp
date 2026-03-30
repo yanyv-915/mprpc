@@ -34,8 +34,10 @@ bool Tcp::init()
         fprintf(stderr, "[ERROR] Bind failed! Errno: %d (%s)\n", save_errno, strerror(save_errno));
         
         // 暴力排查：看看当前进程开了多少 fd
-        system("ls -l /proc/self/fd"); 
-        return false;
+        if (system("ls -l /proc/self/fd") == -1){
+            return false;
+        }
+        
     }
     if (listen(listen_fd, 100) < 0)
     {
