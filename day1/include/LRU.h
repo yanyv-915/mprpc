@@ -1,7 +1,9 @@
 #pragma once
 #include"Header.h"
 #include"io.h"
+#include"ThreadPool.h"
 #include<atomic>
+#include<condition_variable>
 class VectorCache{
 private:
     struct Node{
@@ -14,8 +16,19 @@ private:
         VectorData vec;
     };
 
+    ThreadPool cache_pool;
+    vector<PendingRecord> active_buffer;
+    vector<PendingRecord> persist_buffer;
+
+    thread persist_thread;
+    mutex buffer_mtx;
+    std::condition_variable cv;
+    atomic<bool>stop_thread=false;
+    void backgroundWrite();
+    void asyncPush(const string& key,const VectorData& vec);
+
     vector<PendingRecord> write_buffer;
-    const size_t buffer_threshold=1000;
+    const size_t buffer_threshold=5000;
 
     size_t capacity;
     std::list<Node> cacheList;

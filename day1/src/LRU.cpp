@@ -31,10 +31,18 @@ VectorCache::VectorCache(size_t cap):capacity(cap){
     }
     cacheMap.reserve(cap+10);
     cout<<"容器加载成功!"<<endl;
+    persist_thread=std::thread(&VectorCache::backgroundWrite,this);
 }
 
 VectorCache::~VectorCache(){
-    flushBuffer();
+    {
+        std::lock_guard<mutex> lk(buffer_mtx);
+        stop_thread=true;
+        persist_buffer.swap(active_buffer);
+        
+    }
+    cv.notify_all();
+    if(persist_thread.joinable()) persist_thread.join();
     if(aof_file.is_open()){
         aof_file.close();
     }
@@ -106,6 +114,40 @@ VectorData VectorCache::parseVector(string vecStr){
         res.push_back(std::stod(vecStr));
     }
     return res;
+}
+
+void VectorCache::backgroundWrite(){
+    while(true){
+        vector<PendingRecord> temp_buffer;
+        {
+            std::unique_lock<mutex> lk(buffer_mtx);
+            cv.wait(lk,[this](){
+                return !persist_buffer.empty() || stop_thread;
+            });
+            if(stop_thread && persist_buffer.empty()) break;
+
+            temp_buffer.swap(persist_buffer);
+        }
+        if(!temp_buffer.empty()){
+            for(const auto& rec:temp_buffer){
+                IO::writeString(aof_file,rec.key);
+                IO::writeVec(aof_file,rec.vec);
+            }
+            aof_file.flush();
+        }
+    }
+}
+
+void VectorCache::asyncPush(const string& key,const VectorData& vec){
+    std::unique_lock<mutex> lk(buffer_mtx);
+    active_buffer.push_back({key,vec});
+    if(active_buffer.size()>=buffer_threshold){
+        persist_buffer.insert(persist_buffer.end(),
+                              std::make_move_iterator(active_buffer.begin()),
+                              std::make_move_iterator(active_buffer.end()));
+        active_buffer.clear();
+        cv.notify_one();
+    }
 }
 
 float VectorCache::calL2(const VectorData& v1,const VectorData& v2){
@@ -208,16 +250,7 @@ void VectorCache::saveToBin(const string& request){
         VectorData vec=parseVector(sVec);
         if(checkDim(vec)){
             //cout << "[DEBUG] Writing Key: '" << key << "' Length: " << key.size() << endl;
-            write_buffer.push_back({key,vec});
-            if(write_buffer.size()>=buffer_threshold){
-                flushBuffer();
-                if (!aof_file.good()) {
-                    std::cerr << "AOF 写入失败，流状态异常: " << aof_path << std::endl;
-                    return;
-                }
-            }
-            
-            aof_file.flush();
+            asyncPush(key,vec);
         }
     }
 }
@@ -280,8 +313,6 @@ void VectorCache::handleRequest(const string& rawRequest,const int& client_fd){
         }
         return;
     }
-    // 关键：把 client_fd 透传给 executeCommand，才能在 GET/异常等场景回包给客户端
-    //cout<<rawRequest<<endl;
     executeCommand(rawRequest,client_fd);
     saveToBin(rawRequest);
 }
