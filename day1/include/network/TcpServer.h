@@ -1,16 +1,16 @@
 #pragma once
-#include"Header.h"
 #include"LRU.h"
-#include"Command.h"
 #include"ThreadPool.h"
+#include"Protocol.h"
+#include <sys/epoll.h>
 
 #define MAX_EVENT 1024
 #define PORT 8080
 
 class Tcp{
 private:
-    int listen_fd,epoll_fd;
-    std::unordered_map<int,Client>clients;
+    int listen_fd,epfd;
+    std::unordered_map<size_t,Client>clients;
     epoll_event ev,events[MAX_EVENT];
     mutex n_mtx;
 public:

@@ -1,6 +1,12 @@
-#include "../include/TcpServer.h"
-#include"../include/LRU.h"
+#include "TcpServer.h"
+#include"LRU.h"
+#include"aof.h"
 #include <cstring>
+#include<fcntl.h>
+#include<unistd.h>
+#include <iostream>
+using std::cout;
+using std::endl;
 
 void Tcp::setNonBlocking(const int& fd)
 {
@@ -46,17 +52,17 @@ bool Tcp::init()
     }
     setNonBlocking(listen_fd);
 
-    epoll_fd = epoll_create1(0);
-    if (epoll_fd < 0)
+    epfd = epoll_create1(0);
+    if (epfd < 0)
     {
         perror("epoll");
         return false;
     }
     ev.events = EPOLLIN | EPOLLET;
     ev.data.fd = listen_fd;
-    epoll_ctl(epoll_fd, EPOLL_CTL_ADD, listen_fd, &ev);
+    epoll_ctl(epfd, EPOLL_CTL_ADD, listen_fd, &ev);
 
-    cout << "Server started on port 8080" << endl;
+    cout << "Server started on port 8080" << std::endl;
     return true;
 }
 
@@ -80,7 +86,7 @@ void Tcp::add_epoll(int fd,uint32_t& event)
     ev.data.fd = fd;
     ev.events = event|EPOLLET;
     setNonBlocking(fd);
-    epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev);
+    epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev);
 }
 
 bool Tcp::add_client(int& fd){
@@ -92,7 +98,8 @@ bool Tcp::add_client(int& fd){
     uint32_t event=EPOLLIN|EPOLLOUT;
     add_epoll(fd,event);
     std::unique_lock<mutex> lk(n_mtx);
-    clients[fd]={fd,""};
+    MessageHeader header{};
+    clients[fd]={"",false,header};
     //cout<<"客户端"<<fd<<"成功连接！"<<endl;
     return true;
 }
@@ -100,86 +107,90 @@ bool Tcp::add_client(int& fd){
 void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
 {
     std::unique_lock<mutex> lk(n_mtx);
-    //cout<<"正在处理读事件\n";
-    auto it = clients.find(fd);
-    if (it == clients.end())
-        return;
+    auto it=clients.find(fd);
+    if(it==clients.end()) return;
 
-    Client &client = it->second;
-    char buf[1024];
-    bool connection_closed = false;
-    //cout<<"正在读取数据！"<<endl;
-    // 1. 集中读取数据
-    while (true)
-    {
-        int n = recv(fd, buf, sizeof(buf), 0);
-        if (n > 0)
-        {
-            client.readBuf.append(buf, n);
+    Client& client=it->second;
+    char buf[4096];
+    bool con_close=false;
+
+    while(true){
+        int n=recv(fd,buf,sizeof(buf),0);
+        if(n>0){
+            client.readBuf.append(buf,n);
         }
-        else if (n == 0)
-        {
-            connection_closed = true;
+        else if(n==0){
+            con_close=true;
             break;
         }
-        else
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                break;
-            connection_closed = true;
+        else{
+            if(errno==EAGAIN||errno==EWOULDBLOCK) break;
+            con_close=true;
             break;
         }
     }
-    // 2. 无论连接是否关闭，先处理缓冲区里剩下的完整指令
-    //cout<<"读取到数据！"<<endl;
     lk.unlock();
-    size_t pos;
-    //*************************************多线程*************************************
-    while ((pos = client.readBuf.find('\n')) != string::npos)
-    {
-        string request = client.readBuf.substr(0, pos);
-        client.readBuf.erase(0, pos + 1);
-        //cout<<request<<endl;
-        pool.enqueue([request = std::move(request), &cache, fd]() mutable
-                     {
-            size_t last = request.find_last_not_of("\n\r\t");
-            if (last != string::npos)
-        {
-            request.erase(last + 1);
-            //cout<<request<<endl;
-            cache.handleRequest(request,fd); // 处理逻辑
-        } });
-    } 
-
-    // 3. 最后统一执行清理逻辑
-    if (connection_closed)
-    {
-        std::lock_guard<mutex> lk(n_mtx);
-        if(clients.erase(fd)>0){
-            epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
-            close(fd);
-            //cout<<"客户端"<<std::to_string(fd)<<" 已经关闭!\n";
+    const size_t HEADER_SIZE=sizeof(MessageHeader);
+    while(true){
+        if(!client.headerParsed){
+            if(client.readBuf.size()<HEADER_SIZE) break;
+            memcpy(&client.curHeader,client.readBuf.data(),HEADER_SIZE);
+            if(client.curHeader.magic!=0x4647){
+                std::lock_guard<mutex> lk(n_mtx);
+                clients.erase(fd);
+                epoll_ctl(epfd,EPOLL_CTL_DEL,fd,nullptr);
+                close(fd);
+                return;
+            }
+            client.headerParsed=true;
         }
+        if(client.headerParsed){
+            size_t bodySize=0;
+            if(client.curHeader.op==1 || client.curHeader.op==4){
+                bodySize=client.curHeader.dim*sizeof(float);
+
+            }
+            if(client.readBuf.size()<HEADER_SIZE+bodySize) break;
+            auto vec=VectorFactoy::create(client.curHeader.dataType,client.curHeader.dim);
+            if(bodySize>0 && vec){
+                memcpy((void*)vec->getRawPtr(),client.readBuf.data()+HEADER_SIZE,bodySize);
+            }
+            pool.enqueue([vec,fd,&cache,&client]() mutable{
+                cache.handleRequest(client.curHeader,vec,fd);
+            });
+            client.readBuf.erase(0,HEADER_SIZE+bodySize);
+        }
+    }
+    // 3. 最后统一执行清理逻辑
+    if (con_close)
+    {
+
+        std::lock_guard<mutex> lk(n_mtx);
+
+        if(clients.erase(fd)>0){
+
+            epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr);
+
+            close(fd);
+
+            //cout<<"客户端"<<std::to_string(fd)<<" 已经关闭!\n";
+
+        }
+
     }
 }
 
 void Tcp::run()
 {
     VectorCache myCache(1000000);
+    AofManager aof("aof.bin");
     ThreadPool pool;
-    pool.enqueue([&myCache]() mutable {
-        myCache.loadBin();
-    });
-    {
-        std::lock_guard<mutex> lk(n_mtx);
-        cout << "数据热启动中！......" << endl;
-    }
     if(!init()){
         return;
     }
     while (true)
     {
-        int nfds = epoll_wait(epoll_fd, events, MAX_EVENT, -1);
+        int nfds = epoll_wait(epfd, events, MAX_EVENT, -1);
         for (int i = 0; i < nfds; i++)
         {
             if (events[i].data.fd == listen_fd)
