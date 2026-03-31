@@ -4,10 +4,10 @@
 #include<Vector.h>
 class VectorFactoy{
 public:
-    static std::shared_ptr<IVectorData> create(uint8_t typeTag,uint32_t dim){
+    static std::shared_ptr<IVectorData> create(DataType typeTag,uint32_t dim){
         switch (typeTag)
         {
-        case 1:
+        case DataType::FLOAT32:
             return std::make_shared<FloatVector>(dim);
             break;
         

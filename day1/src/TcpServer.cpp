@@ -146,9 +146,8 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
         }
         if(client.headerParsed){
             size_t bodySize=0;
-            if(client.curHeader.op==1 || client.curHeader.op==4){
+            if(client.curHeader.op == OpCode::SET || client.curHeader.op == OpCode::DEL){
                 bodySize=client.curHeader.dim*sizeof(float);
-
             }
             if(client.readBuf.size()<HEADER_SIZE+bodySize) break;
             auto vec=VectorFactoy::create(client.curHeader.dataType,client.curHeader.dim);
