@@ -5,6 +5,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/CacheServer.dir/src/TcpServer.cpp.o.d"
   "CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o"
   "CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o.d"
+  "CMakeFiles/CacheServer.dir/src/aof.cpp.o"
+  "CMakeFiles/CacheServer.dir/src/aof.cpp.o.d"
   "CMakeFiles/CacheServer.dir/src/main.cpp.o"
   "CMakeFiles/CacheServer.dir/src/main.cpp.o.d"
   "CacheServer"

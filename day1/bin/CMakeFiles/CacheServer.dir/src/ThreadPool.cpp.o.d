@@ -1,7 +1,7 @@
 CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o: \
  /home/liuyixuan/learning/cpp/mprpc/day1/src/ThreadPool.cpp \
  /usr/include/stdc-predef.h \
- /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/ThreadPool.h \
+ /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/core/ThreadPool.h \
  /usr/include/c++/11/thread /usr/include/c++/11/bits/std_thread.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \

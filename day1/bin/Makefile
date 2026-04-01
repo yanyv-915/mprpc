@@ -201,6 +201,30 @@ src/ThreadPool.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CacheServer.dir/build.make CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.s
 .PHONY : src/ThreadPool.cpp.s
 
+src/aof.o: src/aof.cpp.o
+.PHONY : src/aof.o
+
+# target to build an object file
+src/aof.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CacheServer.dir/build.make CMakeFiles/CacheServer.dir/src/aof.cpp.o
+.PHONY : src/aof.cpp.o
+
+src/aof.i: src/aof.cpp.i
+.PHONY : src/aof.i
+
+# target to preprocess a source file
+src/aof.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CacheServer.dir/build.make CMakeFiles/CacheServer.dir/src/aof.cpp.i
+.PHONY : src/aof.cpp.i
+
+src/aof.s: src/aof.cpp.s
+.PHONY : src/aof.s
+
+# target to generate assembly for a file
+src/aof.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CacheServer.dir/build.make CMakeFiles/CacheServer.dir/src/aof.cpp.s
+.PHONY : src/aof.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -243,6 +267,9 @@ help:
 	@echo "... src/ThreadPool.o"
 	@echo "... src/ThreadPool.i"
 	@echo "... src/ThreadPool.s"
+	@echo "... src/aof.o"
+	@echo "... src/aof.i"
+	@echo "... src/aof.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
