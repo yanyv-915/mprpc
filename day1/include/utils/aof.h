@@ -1,54 +1,43 @@
 #pragma once
+#include"../cache/Vector.h"
+#include"../cache/LRU.h"
+#include"../core/IVectorData.h"
+#include"../network/Protocol.h"
+#include"VectorFactory.h"
+#include"io.h"
+
 #include<string>
+#include<queue>
+#include<condition_variable>
+#include<thread>
 #include<fstream>
-#include<IVectorData.h>
-#include<Vector.h>
-#include<Protocol.h>
-#include<io.h>
-#include<LRU.h>
-#include<VectorFactory.h>
 using std::string;
 
+struct AofTask{
+    MessageHeader header;
+    std::shared_ptr<IVectorData> data;
+};
+
+class VectorCache;
 class AofManager{
+private:
+    vector<AofTask> activa_buffer;
+    vector<AofTask> persist_buffer;
+    mutex aof_mtx;
+    std::condition_variable cv;
+    std::thread worker;
+    atomic<bool> stop=false;
+    size_t buffer_threshold=5000;
+    void work_loop();
+    void asyncPush(const MessageHeader& header,const std::shared_ptr<IVectorData>& vec);
 private:
     string filename;
     std::ofstream aof_file;
-
+    
 public:
-    AofManager(const string& path) : filename(path){
-        aof_file.open(filename,std::ios::binary|std::ios::app);
-    }
-
-    void appendSet(uint64_t keyId,const IVectorData& vec){
-        MessageHeader header;
-        header.magic=0x4647;
-        header.op=1;
-        header.key_id=keyId;
-        header.dim=vec.dim();
-
-        if(IO::writeHeader(aof_file,header)){
-            IO::writeVector(aof_file,vec);
-            aof_file.flush();
-        }
-    }
-
-    void appendDel(uint64_t keyId){
-        MessageHeader header={0x4647,3,keyId,0};
-        IO::writeHeader(aof_file,header);
-        aof_file.flush();
-    }
-
-    void recover(VectorCache& cache){
-        std::ifstream is("cache.bin",std::ios::binary);
-        MessageHeader header;
-        while(IO::readHeader(is,header)){
-            if(header.magic!=0x4647) continue;
-            if(header.op==1){
-                auto vec=VectorFactoy::create(header.dataType,header.dim);
-                if(vec&& IO::readRaw(is,(void*)vec->getRawPtr(),vec->getSize())){
-                    cache.set(header.key_id,vec);
-                }
-            }
-        }
-    }
+    AofManager(const string& path);
+    AofManager();
+    void appendSet(uint64_t keyId,const IVectorData& vec);
+    void appendDel(uint64_t keyId);
+    void recover(VectorCache& cache);
 };

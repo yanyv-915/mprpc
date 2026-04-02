@@ -1,6 +1,6 @@
 #pragma once
-#include"LRU.h"
-#include"ThreadPool.h"
+#include"../cache/LRU.h"
+#include"../core/ThreadPool.h"
 #include"Protocol.h"
 #include <sys/epoll.h>
 

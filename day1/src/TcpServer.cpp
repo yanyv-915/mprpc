@@ -1,6 +1,7 @@
-#include "TcpServer.h"
-#include"LRU.h"
-#include"aof.h"
+#include "../include/network/TcpServer.h"
+#include"../include/cache/LRU.h"
+#include"../include/utils/aof.h"
+
 #include <cstring>
 #include<fcntl.h>
 #include<unistd.h>
@@ -182,7 +183,7 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
 void Tcp::run()
 {
     VectorCache myCache(1000000);
-    AofManager aof("aof.bin");
+    
     ThreadPool pool;
     if(!init()){
         return;

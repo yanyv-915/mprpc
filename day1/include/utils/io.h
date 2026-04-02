@@ -1,9 +1,11 @@
 #pragma once
+#include"../core/IVectorData.h"
+#include"../network/Protocol.h"
+
 #include<iostream>
 #include<vector>
 #include<string>
-#include"IVectorData.h"
-#include"Protocol.h"
+
 
 class IO{
 public:
@@ -25,6 +27,6 @@ public:
 
     static bool readRaw(std::istream& is,void* dest,size_t size){
         is.read(reinterpret_cast<char*>(dest),size);
-        return is.gcount() == size;
+        return (size_t)is.gcount() == size;
     }
 };

@@ -1,7 +1,9 @@
 #pragma once
+#include"../core/IVectorData.h"
+#include"../network/Protocol.h"
+#include"../cache/Vector.h"
+
 #include<memory>
-#include<IVectorData.h>
-#include<Vector.h>
 class VectorFactoy{
 public:
     static std::shared_ptr<IVectorData> create(DataType typeTag,uint32_t dim){
