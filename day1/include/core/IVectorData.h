@@ -5,6 +5,7 @@
 class IVectorData{
 public:
     virtual ~IVectorData() = default;
+    
     virtual size_t getSize() const = 0;
     virtual uint32_t dim() const = 0;
     virtual const void* getRawPtr() const = 0;

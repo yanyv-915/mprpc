@@ -35,7 +35,7 @@ public:
 private:
     size_t cap_single;
     shared_ptr<AofManager>aof;
-
+    thread file_loading;
 private:
 //实现基础功能
     bool get(const uint64_t& key,std::shared_ptr<IVectorData>& vec);

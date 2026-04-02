@@ -9,6 +9,7 @@ VectorCache::VectorCache(size_t cap):cap_single(cap),segments(SEGMENT_CNT){
             segments[i].storage.reserve(cap_single);
         });
     }
+    aof->recover(*this);
     for(auto& t:threads){
         if(t.joinable()) t.join();
     }
@@ -72,7 +73,7 @@ void VectorCache::handleRequest(const MessageHeader& header,shared_ptr<IVectorDa
     {
     case OpCode::SET:
         set(header.key_id,vec);
-        aof->appendSet(header.key_id,*vec);
+        aof->appendSet(header.key_id,vec);
         break;
     case OpCode::GET:
         get(header.key_id,vec);

@@ -5,14 +5,16 @@ AofManager::AofManager(const string &path) : filename(path)
     if(!aof_file.is_open()){
         std::cerr<<"文件打开失败!\n";
     }
-    work_loop();
+    worker=std::thread(&AofManager::work_loop,this);
+    
 }
 AofManager::AofManager()
 {
-    aof_file.open("cache.bin", std::ios::binary | std::ios::app);
+    aof_file.open("../cache.bin", std::ios::binary | std::ios::app);
     if(!aof_file.is_open()){
         std::cerr<<"文件打开失败!\n";
     }
+    
     worker=std::thread(&AofManager::work_loop,this);
 }
 AofManager::~AofManager(){
@@ -23,6 +25,7 @@ AofManager::~AofManager(){
     }
     cv.notify_all();
     if(worker.joinable()) worker.join();
+    if(aof_file.is_open()) aof_file.close();
 }
 void AofManager::work_loop(){
     while(true){
@@ -55,27 +58,22 @@ void AofManager::asyncPush(const MessageHeader& header,const std::shared_ptr<IVe
         activa_buffer.clear();
         cv.notify_one();
     }
-    
 }
 
-void AofManager::appendSet(uint64_t keyId, const IVectorData &vec)
+void AofManager::appendSet(const uint64_t& keyId, const std::shared_ptr<IVectorData>& vec)
 {
     MessageHeader header;
     header.magic = 0x4647;
     header.op = OpCode::SET;
-    header.dataType = vec.getTypeTag();
+    header.dataType = vec->getTypeTag();
     header.key_id = keyId;
-    header.dim = vec.dim();
-
-    if (IO::writeHeader(aof_file, header))
-    {
-        IO::writeVector(aof_file, vec);
-        aof_file.flush();
-    }
+    header.dim = vec->dim();
+    asyncPush(header,vec);
 }
 
-void AofManager::appendDel(uint64_t keyId)
+void AofManager::appendDel(const uint64_t& keyId)
 {
+    std::lock_guard<mutex> lk(aof_mtx);
     MessageHeader header = {0x4647, OpCode::DEL, DataType::BINARY, keyId, 0};
     IO::writeHeader(aof_file, header);
     aof_file.flush();

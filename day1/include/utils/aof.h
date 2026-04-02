@@ -8,11 +8,15 @@
 
 #include<string>
 #include<queue>
+#include<vector>
+#include<mutex>
+#include<atomic>
 #include<condition_variable>
 #include<thread>
 #include<fstream>
 using std::string;
-
+using std::vector;
+using std::mutex;
 struct AofTask{
     MessageHeader header;
     std::shared_ptr<IVectorData> data;
@@ -26,18 +30,19 @@ private:
     mutex aof_mtx;
     std::condition_variable cv;
     std::thread worker;
-    atomic<bool> stop=false;
+    std::atomic<bool> stop=false;
     size_t buffer_threshold=5000;
     void work_loop();
     void asyncPush(const MessageHeader& header,const std::shared_ptr<IVectorData>& vec);
 private:
     string filename;
     std::ofstream aof_file;
-    
+
 public:
     AofManager(const string& path);
     AofManager();
-    void appendSet(uint64_t keyId,const IVectorData& vec);
-    void appendDel(uint64_t keyId);
+    ~AofManager();
+    void appendSet(const uint64_t& keyId,const std::shared_ptr<IVectorData>& vec);
+    void appendDel(const uint64_t& keyId);
     void recover(VectorCache& cache);
 };

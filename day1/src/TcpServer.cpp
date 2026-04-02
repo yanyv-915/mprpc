@@ -99,9 +99,17 @@ bool Tcp::add_client(int& fd){
     add_epoll(fd,event);
     std::unique_lock<mutex> lk(n_mtx);
     MessageHeader header{};
-    clients[fd]={"",false,header};
+    clients[fd]=std::make_shared<Client>("",false,header);
     //cout<<"客户端"<<fd<<"成功连接！"<<endl;
     return true;
+}
+
+inline void Tcp::send_msg(const size_t& fd){
+    {
+        std::lock_guard<mutex> lk(n_mtx);
+        string reply="ok";
+        send(fd,reply.c_str(),reply.size(),MSG_NOSIGNAL);
+    }
 }
 
 void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
@@ -110,14 +118,14 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
     auto it=clients.find(fd);
     if(it==clients.end()) return;
 
-    Client& client=it->second;
+    auto& client=it->second;
     char buf[4096];
     bool con_close=false;
 
     while(true){
         int n=recv(fd,buf,sizeof(buf),0);
         if(n>0){
-            client.readBuf.append(buf,n);
+            client->readBuf.append(buf,n);
         }
         else if(n==0){
             con_close=true;
@@ -132,51 +140,51 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
     lk.unlock();
     const size_t HEADER_SIZE=sizeof(MessageHeader);
     while(true){
-        if(!client.headerParsed){
-            if(client.readBuf.size()<HEADER_SIZE) break;
-            memcpy(&client.curHeader,client.readBuf.data(),HEADER_SIZE);
-            if(client.curHeader.magic!=0x4647){
+        if(!client->headerParsed){
+            if(client->readBuf.size()<HEADER_SIZE) break;
+            memcpy(&client->curHeader,client->readBuf.data(),HEADER_SIZE);
+            if(client->curHeader.magic!=0x4647){
                 std::lock_guard<mutex> lk(n_mtx);
                 clients.erase(fd);
                 epoll_ctl(epfd,EPOLL_CTL_DEL,fd,nullptr);
                 close(fd);
                 return;
             }
-            client.headerParsed=true;
+            client->headerParsed=true;
         }
-        if(client.headerParsed){
+        if(client->headerParsed){
             size_t bodySize=0;
-            if(client.curHeader.op == OpCode::SET || client.curHeader.op == OpCode::DEL){
-                switch (client.curHeader.dataType){
+            if(client->curHeader.op == OpCode::SET || client->curHeader.op == OpCode::DEL){
+                switch (client->curHeader.dataType){
                     case DataType::FLOAT32:
-                        bodySize = client.curHeader.dim * sizeof(float);
+                        bodySize = client->curHeader.dim * sizeof(float);
                         break;
                     case DataType::INT16:
-                        bodySize = client.curHeader.dim * sizeof(int16_t);
+                        bodySize = client->curHeader.dim * sizeof(int16_t);
                         break;
                     case DataType::BINARY:
-                        bodySize = client.curHeader.dim * sizeof(uint8_t);
+                        bodySize = client->curHeader.dim * sizeof(uint8_t);
                         break;
                     default:
                         bodySize=0;
                         break;
                 }
             }
-            if(client.readBuf.size()<HEADER_SIZE+bodySize) break;
-            auto vec=VectorFactoy::create(client.curHeader.dataType,client.curHeader.dim);
+            if(client->readBuf.size()<HEADER_SIZE+bodySize) break;
+            auto vec=VectorFactoy::create(client->curHeader.dataType,client->curHeader.dim);
             if(bodySize>0 && vec){
-                memcpy((void*)vec->getRawPtr(),client.readBuf.data()+HEADER_SIZE,bodySize);
+                memcpy((void*)vec->getRawPtr(),client->readBuf.data()+HEADER_SIZE,bodySize);
             }
-            pool.enqueue([vec,fd,&cache,&client]() mutable{
-                cache.handleRequest(client.curHeader,vec,fd);
+            pool.enqueue([vec,fd,&cache,&client,this]() mutable{
+                cache.handleRequest(client->curHeader,vec,fd);
+                send_msg(fd);
             });
-            client.readBuf.erase(0,HEADER_SIZE+bodySize);
+            client->readBuf.erase(0,HEADER_SIZE+bodySize);
         }
     }
     // 3. 最后统一执行清理逻辑
     if (con_close)
     {
-
         std::lock_guard<mutex> lk(n_mtx);
         if(clients.erase(fd)>0){
             epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr);
