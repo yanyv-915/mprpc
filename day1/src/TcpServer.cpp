@@ -6,6 +6,7 @@
 #include<fcntl.h>
 #include<unistd.h>
 #include <iostream>
+#include<memory>
 using std::cout;
 using std::endl;
 
@@ -114,14 +115,16 @@ inline void Tcp::send_msg(const size_t& fd){
 
 void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
 {
-    std::unique_lock<mutex> lk(n_mtx);
+    std::unique_lock<mutex> lk_gloabal(n_mtx);
     auto it=clients.find(fd);
     if(it==clients.end()) return;
+    auto client=it->second;
+    lk_gloabal.unlock();
 
-    auto& client=it->second;
     char buf[4096];
     bool con_close=false;
 
+    std::unique_lock<mutex> lk(client->mtx);
     while(true){
         int n=recv(fd,buf,sizeof(buf),0);
         if(n>0){
@@ -137,18 +140,14 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
             break;
         }
     }
-    lk.unlock();
     const size_t HEADER_SIZE=sizeof(MessageHeader);
     while(true){
         if(!client->headerParsed){
             if(client->readBuf.size()<HEADER_SIZE) break;
             memcpy(&client->curHeader,client->readBuf.data(),HEADER_SIZE);
             if(client->curHeader.magic!=0x4647){
-                std::lock_guard<mutex> lk(n_mtx);
-                clients.erase(fd);
-                epoll_ctl(epfd,EPOLL_CTL_DEL,fd,nullptr);
-                close(fd);
-                return;
+                con_close=true;
+                break;
             }
             client->headerParsed=true;
         }
@@ -175,11 +174,13 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
             if(bodySize>0 && vec){
                 memcpy((void*)vec->getRawPtr(),client->readBuf.data()+HEADER_SIZE,bodySize);
             }
-            pool.enqueue([vec,fd,&cache,&client,this]() mutable{
-                cache.handleRequest(client->curHeader,vec,fd);
+            auto clientPtr=client;
+            pool.enqueue([vec,fd,&cache,clientPtr,this]() mutable{
+                cache.handleRequest(clientPtr->curHeader,vec,fd);
                 send_msg(fd);
             });
             client->readBuf.erase(0,HEADER_SIZE+bodySize);
+            lk.unlock();
         }
     }
     // 3. 最后统一执行清理逻辑

@@ -2,6 +2,8 @@
 #include<netinet/in.h>
 #include<vector>
 #include<string>
+#include<mutex>
+using std::mutex;
 
 enum class OpCode:uint8_t{
     SET = 1,
@@ -32,4 +34,10 @@ struct Client{
     std::string readBuf;
     bool headerParsed=false;
     MessageHeader curHeader;
+    mutex mtx;
+    Client(std::string buf , bool f, MessageHeader header){
+        readBuf=buf;
+        headerParsed=f;
+        curHeader=header;
+    }
 };
