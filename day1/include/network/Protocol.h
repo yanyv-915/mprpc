@@ -13,7 +13,7 @@ enum class OpCode:uint8_t{
 
 enum class DataType:uint8_t{
     FLOAT32 = 1,
-    INT8 = 2,
+    INT16 = 2,
     BINARY = 3
 };
 

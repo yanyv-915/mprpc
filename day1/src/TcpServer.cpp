@@ -77,7 +77,6 @@ bool Tcp::accept_client(int &client_fd)
         perror("accept");
         return false;
     }
-
     return true;
 }
 
@@ -148,7 +147,20 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
         if(client.headerParsed){
             size_t bodySize=0;
             if(client.curHeader.op == OpCode::SET || client.curHeader.op == OpCode::DEL){
-                bodySize=client.curHeader.dim*sizeof(float);
+                switch (client.curHeader.dataType){
+                    case DataType::FLOAT32:
+                        bodySize = client.curHeader.dim * sizeof(float);
+                        break;
+                    case DataType::INT16:
+                        bodySize = client.curHeader.dim * sizeof(int16_t);
+                        break;
+                    case DataType::BINARY:
+                        bodySize = client.curHeader.dim * sizeof(uint8_t);
+                        break;
+                    default:
+                        bodySize=0;
+                        break;
+                }
             }
             if(client.readBuf.size()<HEADER_SIZE+bodySize) break;
             auto vec=VectorFactoy::create(client.curHeader.dataType,client.curHeader.dim);
@@ -166,17 +178,11 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
     {
 
         std::lock_guard<mutex> lk(n_mtx);
-
         if(clients.erase(fd)>0){
-
             epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr);
-
             close(fd);
-
             //cout<<"客户端"<<std::to_string(fd)<<" 已经关闭!\n";
-
         }
-
     }
 }
 

@@ -81,6 +81,7 @@ void VectorCache::handleRequest(const MessageHeader& header,shared_ptr<IVectorDa
         del(header.key_id);
         break;
     case OpCode::SEARCH:
+        
         break;
     default:
         break;
