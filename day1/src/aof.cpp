@@ -11,6 +11,7 @@ AofManager::AofManager(const string &path) : filename(path)
 AofManager::AofManager()
 {
     aof_file.open("../cache.bin", std::ios::binary | std::ios::app);
+    //std::cout<<this<<std::endl;
     if(!aof_file.is_open()){
         std::cerr<<"文件打开失败!\n";
     }
@@ -20,14 +21,15 @@ AofManager::AofManager()
 AofManager::~AofManager(){
     {
         std::unique_lock<mutex> lk(aof_mtx);
-        stop=true;
         persist_buffer.swap(activa_buffer);
+        stop=true;
     }
     cv.notify_all();
     if(worker.joinable()) worker.join();
     if(aof_file.is_open()) aof_file.close();
 }
 void AofManager::work_loop(){
+    //std::cout << "AOF Worker Thread [ID: " << std::this_thread::get_id() << "] Started." << std::endl;
     while(true){
         vector<AofTask> temp_buffer;
         {
@@ -50,6 +52,7 @@ void AofManager::work_loop(){
 
 void AofManager::asyncPush(const MessageHeader& header,const std::shared_ptr<IVectorData>& vec){
     std::lock_guard<mutex> lk(aof_mtx);
+    //std::cout << "Pushing to: " << this << std::endl;
     activa_buffer.push_back({header,vec});
     if(activa_buffer.size()>=buffer_threshold){
         persist_buffer.insert(persist_buffer.end(),
@@ -81,7 +84,7 @@ void AofManager::appendDel(const uint64_t& keyId)
 
 void AofManager::recover(VectorCache &cache)
 {
-    std::ifstream is("cache.bin", std::ios::binary);
+    std::ifstream is("../cache.bin", std::ios::binary);
     MessageHeader header;
     while (IO::readHeader(is, header))
     {

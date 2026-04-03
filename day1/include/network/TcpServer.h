@@ -4,7 +4,10 @@
 #include"Protocol.h"
 
 #include <sys/epoll.h>
-
+#include <atomic>
+#include <csignal>
+// 定义一个全局标志位
+static std::atomic<bool> g_running(true);
 #define MAX_EVENT 1024
 #define PORT 8080
 
@@ -15,6 +18,13 @@ private:
     epoll_event ev,events[MAX_EVENT];
     mutex n_mtx;
 public:
+    static void handle_sigint(int sig) {
+    if (sig == SIGINT) {
+        std::cout << "\n[Server] 捕捉到退出信号，正在停止事件循环..." << std::endl;
+        g_running = false;
+    }
+}
+
     bool init();
     void setNonBlocking(const int& fd);
     bool accept_client(int& client_fd);

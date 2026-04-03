@@ -82,8 +82,8 @@ def worker(client, num_requests, dim):
         # client.send_uint8(key_id, vec)
         
 if __name__ == "__main__":
-    thread_count = 10
-    requests_per_thread = 1000
+    thread_count = 1
+    requests_per_thread = 101
     dim = 4
 
     start = time.time()

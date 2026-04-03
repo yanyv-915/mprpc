@@ -126,7 +126,7 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
 
     std::unique_lock<mutex> lk(client->mtx);
     while(true){
-        int n=recv(fd,buf,sizeof(buf),0);
+        int n=recv(fd,buf,sizeof(buf),MSG_NOSIGNAL);
         if(n>0){
             client->readBuf.append(buf,n);
         }
@@ -197,13 +197,15 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
 
 void Tcp::run()
 {
-    VectorCache myCache(1000000);
+    // 注册信号
+    std::signal(SIGINT, handle_sigint);
+    VectorCache myCache(1024);
     
     ThreadPool pool;
     if(!init()){
         return;
     }
-    while (true)
+    while (g_running)
     {
         int nfds = epoll_wait(epfd, events, MAX_EVENT, -1);
         for (int i = 0; i < nfds; i++)

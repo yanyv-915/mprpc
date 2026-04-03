@@ -15,6 +15,7 @@ VectorCache::VectorCache(size_t cap):cap_single(cap),segments(SEGMENT_CNT){
     }
 }
 
+
 void VectorCache::set(const uint64_t& key,const std::shared_ptr<IVectorData>& vec){
     if(!vec){
         throw std::invalid_argument("向量数据不能为nullptr");

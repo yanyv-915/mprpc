@@ -6,6 +6,7 @@
 #include"VectorFactory.h"
 #include"io.h"
 
+#include <signal.h>
 #include<string>
 #include<queue>
 #include<vector>
@@ -31,7 +32,7 @@ private:
     std::condition_variable cv;
     std::thread worker;
     std::atomic<bool> stop=false;
-    size_t buffer_threshold=5000;
+    size_t buffer_threshold=100;
     void work_loop();
     void asyncPush(const MessageHeader& header,const std::shared_ptr<IVectorData>& vec);
 private:
