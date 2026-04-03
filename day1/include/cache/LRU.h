@@ -9,6 +9,7 @@
 #include<mutex>
 #include<shared_mutex>
 #include<condition_variable>
+#include<future>
 
 #include<memory>
 #include<vector>
@@ -31,6 +32,7 @@ public:
     VectorCache(size_t cap);
     void set(const uint64_t& key,const std::shared_ptr<IVectorData>& vec);
     void del(const uint64_t& key);
+    vector<shared_ptr<IVectorData>> search(const shared_ptr<IVectorData>& query,size_t topK=1);
     void handleRequest(const MessageHeader& header,shared_ptr<IVectorData>& vec,const size_t& fd);
 
 private:
@@ -42,12 +44,16 @@ private:
 //实现基础功能
     bool get(const uint64_t& key,std::shared_ptr<IVectorData>& vec);
     bool checkDim(const shared_ptr<IVectorData>& vec);
-    bool search(const shared_ptr<IVectorData>& query);
+    struct SearchRes{
+        shared_ptr<IVectorData> vec;
+        float distance;
+    };
+    
 private:
     static const size_t SEGMENT_CNT=128;
     static const size_t MASK = SEGMENT_CNT-1;
     struct Segment{
-        mutex mtx;
+        std::shared_mutex mtx;
         std::list<uint64_t> cache_list;
         struct Node{
             shared_ptr<IVectorData> data;
@@ -57,7 +63,4 @@ private:
         
     };
     vector<Segment>segments;
-    
-
-
 };

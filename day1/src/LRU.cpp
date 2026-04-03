@@ -1,5 +1,7 @@
 #include"../include/cache/LRU.h"
 #include"../include/utils/aof.h"
+#include<algorithm>
+
 VectorCache::VectorCache(size_t cap):cap_single(cap),segments(SEGMENT_CNT){
     aof=std::make_shared<AofManager>();
     vector<thread> threads;
@@ -34,7 +36,7 @@ void VectorCache::set(const uint64_t& key,const std::shared_ptr<IVectorData>& ve
         throw std::invalid_argument("向量数据不能为nullptr");
     }
     size_t seg_idx=key % MASK;
-    std::lock_guard<mutex> lk(segments[seg_idx].mtx);
+    std::shared_lock<std::shared_mutex> lk(segments[seg_idx].mtx);
     auto it=segments[seg_idx].storage.find(key);
     auto& cur_seg=segments[seg_idx];
     if(it!=cur_seg.storage.end()){
@@ -59,7 +61,7 @@ bool VectorCache::get(const uint64_t& key,std::shared_ptr<IVectorData>& vec){
         return false;
     }
     size_t seg_idx=key % MASK;
-    std::lock_guard<mutex> lk(segments[seg_idx].mtx);
+    std::shared_lock<std::shared_mutex> lk(segments[seg_idx].mtx);
     auto& cur_seg=segments[seg_idx];
     auto it=cur_seg.storage.find(key);
     if(it!=cur_seg.storage.end()){
@@ -73,13 +75,42 @@ bool VectorCache::get(const uint64_t& key,std::shared_ptr<IVectorData>& vec){
 
 void VectorCache::del(const uint64_t& key){
     size_t seg_idx=key % MASK;
-    std::lock_guard<mutex> lk(segments[seg_idx].mtx);
+    std::shared_lock<std::shared_mutex> lk(segments[seg_idx].mtx);
     auto& cur_seg=segments[seg_idx];
     auto it=cur_seg.storage.find(key);
     if(it==cur_seg.storage.end()) return;
     auto listIt=it->second;
     cur_seg.cache_list.erase(listIt.it);
     cur_seg.storage.erase(key);
+}
+
+vector<shared_ptr<IVectorData>> VectorCache::search(const shared_ptr<IVectorData>& query,size_t topK){
+    vector<std::future<vector<SearchRes>>> futures;
+
+    for(size_t i=0;i<SEGMENT_CNT;i++){
+        futures.push_back(std::async(std::launch::async,[this,i,&query](){
+            vector<SearchRes> local_res;
+            std::shared_lock<std::shared_mutex> lk(segments[i].mtx);
+            for(auto& pair:segments[i].storage){
+                float dist=query->compute_l2(pair.second.data.get());
+                local_res.push_back({pair.second.data,dist});
+            }
+            return local_res;
+        }));
+    }
+    std::vector<SearchRes> all_candidates;
+    for(auto& f:futures){
+        auto res=f.get();
+        all_candidates.insert(all_candidates.end(),res.begin(),res.end());
+    }
+    std::sort(all_candidates.begin(),all_candidates.end(),[](const SearchRes& a,const SearchRes& b){
+        return a.distance<b.distance;
+    });
+    vector<shared_ptr<IVectorData>> ans;
+    for(size_t i=0;i<std::min((size_t)all_candidates.size(),topK);i++){
+        ans.push_back(all_candidates[i].vec);
+    }
+    return ans;
 }
 
 void VectorCache::handleRequest(const MessageHeader& header,shared_ptr<IVectorData>& vec,const size_t& fd){
