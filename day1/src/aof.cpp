@@ -86,17 +86,26 @@ void AofManager::recover(VectorCache &cache)
 {
     std::ifstream is("../cache.bin", std::ios::binary);
     MessageHeader header;
+    size_t total_cnt=0,set_cnt=0,del_cnt=0;
     while (IO::readHeader(is, header))
     {
-        if (header.magic != 0x4647)
-            continue;
+        if (header.magic != 0x4647) continue;
+        total_cnt++;
         if (header.op == OpCode::SET)
         {
+            set_cnt++;
             auto vec = VectorFactoy::create(header.dataType, header.dim);
             if (vec && IO::readRaw(is, (void *)vec->getRawPtr(), vec->getSize()))
             {
                 cache.set(header.key_id, vec);
             }
         }
+        else if (header.op == OpCode::DEL) {
+            del_cnt++;
+            cache.del(header.key_id); 
+        }
     }
+    std::cout << "[Recover] AOF 加载完成！" << std::endl;
+    std::cout << " -> 扫描总记录: " << total_cnt << std::endl;
+    std::cout << " -> 内存有效向量: " << set_cnt << std::endl;
 }
