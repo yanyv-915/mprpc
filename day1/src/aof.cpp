@@ -78,16 +78,17 @@ void AofManager::appendDel(const uint64_t& keyId)
 {
     std::lock_guard<mutex> lk(aof_mtx);
     MessageHeader header = {0x4647, OpCode::DEL, DataType::BINARY, keyId, 0};
-    IO::writeHeader(aof_file, header);
-    aof_file.flush();
+    asyncPush(header,nullptr);
 }
 
 void AofManager::recover(VectorCache &cache)
 {
     std::ifstream is("../cache.bin", std::ios::binary);
     MessageHeader header;
+    size_t total=0;
     while (IO::readHeader(is, header))
     {
+        total++;
         if (header.magic != 0x4647)
             continue;
         if (header.op == OpCode::SET)
@@ -98,5 +99,9 @@ void AofManager::recover(VectorCache &cache)
                 cache.set(header.key_id, vec);
             }
         }
+        else if(header.op == OpCode::DEL){
+            cache.del(header.key_id);
+        }
     }
+    std::cout<<"成功恢复了 "<<total<<" 条数据\n";
 }
