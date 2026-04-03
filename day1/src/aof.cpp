@@ -28,6 +28,25 @@ AofManager::~AofManager(){
     if(worker.joinable()) worker.join();
     if(aof_file.is_open()) aof_file.close();
 }
+
+long AofManager::getDim(){
+    std::ifstream ifs("../cache.bin",std::ios::binary);
+    if(!ifs.is_open()){
+        std::cerr<<"文件不存在！\n";
+        return -1;
+    }
+    ifs.seekg(0,std::ios::end);
+    auto size=ifs.tellg();
+    if(static_cast<size_t>(size)<sizeof(MessageHeader)){
+        std::cerr<<"文件为空或损坏！\n";
+        return -1;
+    }
+    ifs.seekg(0);
+    MessageHeader header{};
+    IO::readHeader(ifs,header);
+    return static_cast<long>(header.dim);
+}
+
 void AofManager::work_loop(){
     //std::cout << "AOF Worker Thread [ID: " << std::this_thread::get_id() << "] Started." << std::endl;
     while(true){

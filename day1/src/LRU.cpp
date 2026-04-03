@@ -9,12 +9,25 @@ VectorCache::VectorCache(size_t cap):cap_single(cap),segments(SEGMENT_CNT){
             segments[i].storage.reserve(cap_single);
         });
     }
-    aof->recover(*this);
     for(auto& t:threads){
         if(t.joinable()) t.join();
     }
+    global_dim = aof->getDim();
+    std::cout<<"文件初始化为"<<global_dim<<"维\n";
+    aof->recover(*this);
 }
 
+bool VectorCache::checkDim(const shared_ptr<IVectorData>& vec){
+    if(global_dim == -1){
+        global_dim = vec->dim();
+        return true;
+    }
+    else if(global_dim != vec->dim()){
+        std::cerr<<"维度匹配错误！期望维度 "<<global_dim<<" 实际维度 "<<vec->dim()<<"\n";
+        return false;
+    }
+    return true;
+}
 
 void VectorCache::set(const uint64_t& key,const std::shared_ptr<IVectorData>& vec){
     if(!vec){

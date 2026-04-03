@@ -43,6 +43,7 @@ public:
     AofManager(const string& path);
     AofManager();
     ~AofManager();
+    long getDim();
     void appendSet(const uint64_t& keyId,const std::shared_ptr<IVectorData>& vec);
     void appendDel(const uint64_t& keyId);
     void recover(VectorCache& cache);

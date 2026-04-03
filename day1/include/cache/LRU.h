@@ -30,16 +30,18 @@ public:
 //容器初始化
     VectorCache(size_t cap);
     void set(const uint64_t& key,const std::shared_ptr<IVectorData>& vec);
+    void del(const uint64_t& key);
     void handleRequest(const MessageHeader& header,shared_ptr<IVectorData>& vec,const size_t& fd);
 
 private:
     size_t cap_single;
     shared_ptr<AofManager>aof;
     thread file_loading;
+    long global_dim=-1;
 private:
 //实现基础功能
     bool get(const uint64_t& key,std::shared_ptr<IVectorData>& vec);
-    void del(const uint64_t& key);
+    bool checkDim(const shared_ptr<IVectorData>& vec);
     bool search(const shared_ptr<IVectorData>& query);
 private:
     static const size_t SEGMENT_CNT=128;
