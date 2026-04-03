@@ -180,9 +180,10 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
                 send_msg(fd);
             });
             client->readBuf.erase(0,HEADER_SIZE+bodySize);
-            lk.unlock();
+            
         }
     }
+    lk.unlock();
     // 3. 最后统一执行清理逻辑
     if (con_close)
     {
