@@ -81,12 +81,12 @@ clean: CMakeFiles/CacheServer.dir/clean
 CMakeFiles/CacheServer.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CacheServer.dir/build.make CMakeFiles/CacheServer.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CacheServer.dir/build.make CMakeFiles/CacheServer.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles --progress-num=1,2,3,4,5,6 "Built target CacheServer"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles --progress-num=1,2,3,4,5 "Built target CacheServer"
 .PHONY : CMakeFiles/CacheServer.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/CacheServer.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles 6
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles 5
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/CacheServer.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles 0
 .PHONY : CMakeFiles/CacheServer.dir/rule

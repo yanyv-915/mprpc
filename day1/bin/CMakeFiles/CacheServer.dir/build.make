@@ -97,24 +97,10 @@ CMakeFiles/CacheServer.dir/src/TcpServer.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/CacheServer.dir/src/TcpServer.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuyixuan/learning/cpp/mprpc/day1/src/TcpServer.cpp -o CMakeFiles/CacheServer.dir/src/TcpServer.cpp.s
 
-CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o: CMakeFiles/CacheServer.dir/flags.make
-CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o: /home/liuyixuan/learning/cpp/mprpc/day1/src/ThreadPool.cpp
-CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o: CMakeFiles/CacheServer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o -MF CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o.d -o CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o -c /home/liuyixuan/learning/cpp/mprpc/day1/src/ThreadPool.cpp
-
-CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuyixuan/learning/cpp/mprpc/day1/src/ThreadPool.cpp > CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.i
-
-CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuyixuan/learning/cpp/mprpc/day1/src/ThreadPool.cpp -o CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.s
-
 CMakeFiles/CacheServer.dir/src/aof.cpp.o: CMakeFiles/CacheServer.dir/flags.make
 CMakeFiles/CacheServer.dir/src/aof.cpp.o: /home/liuyixuan/learning/cpp/mprpc/day1/src/aof.cpp
 CMakeFiles/CacheServer.dir/src/aof.cpp.o: CMakeFiles/CacheServer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/CacheServer.dir/src/aof.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/CacheServer.dir/src/aof.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/CacheServer.dir/src/aof.cpp.o -MF CMakeFiles/CacheServer.dir/src/aof.cpp.o.d -o CMakeFiles/CacheServer.dir/src/aof.cpp.o -c /home/liuyixuan/learning/cpp/mprpc/day1/src/aof.cpp
 
 CMakeFiles/CacheServer.dir/src/aof.cpp.i: cmake_force
@@ -128,7 +114,7 @@ CMakeFiles/CacheServer.dir/src/aof.cpp.s: cmake_force
 CMakeFiles/CacheServer.dir/src/main.cpp.o: CMakeFiles/CacheServer.dir/flags.make
 CMakeFiles/CacheServer.dir/src/main.cpp.o: /home/liuyixuan/learning/cpp/mprpc/day1/src/main.cpp
 CMakeFiles/CacheServer.dir/src/main.cpp.o: CMakeFiles/CacheServer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/CacheServer.dir/src/main.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/CacheServer.dir/src/main.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/CacheServer.dir/src/main.cpp.o -MF CMakeFiles/CacheServer.dir/src/main.cpp.o.d -o CMakeFiles/CacheServer.dir/src/main.cpp.o -c /home/liuyixuan/learning/cpp/mprpc/day1/src/main.cpp
 
 CMakeFiles/CacheServer.dir/src/main.cpp.i: cmake_force
@@ -143,7 +129,6 @@ CMakeFiles/CacheServer.dir/src/main.cpp.s: cmake_force
 CacheServer_OBJECTS = \
 "CMakeFiles/CacheServer.dir/src/LRU.cpp.o" \
 "CMakeFiles/CacheServer.dir/src/TcpServer.cpp.o" \
-"CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o" \
 "CMakeFiles/CacheServer.dir/src/aof.cpp.o" \
 "CMakeFiles/CacheServer.dir/src/main.cpp.o"
 
@@ -152,12 +137,11 @@ CacheServer_EXTERNAL_OBJECTS =
 
 CacheServer: CMakeFiles/CacheServer.dir/src/LRU.cpp.o
 CacheServer: CMakeFiles/CacheServer.dir/src/TcpServer.cpp.o
-CacheServer: CMakeFiles/CacheServer.dir/src/ThreadPool.cpp.o
 CacheServer: CMakeFiles/CacheServer.dir/src/aof.cpp.o
 CacheServer: CMakeFiles/CacheServer.dir/src/main.cpp.o
 CacheServer: CMakeFiles/CacheServer.dir/build.make
 CacheServer: CMakeFiles/CacheServer.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX executable CacheServer"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/liuyixuan/learning/cpp/mprpc/day1/bin/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Linking CXX executable CacheServer"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/CacheServer.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
