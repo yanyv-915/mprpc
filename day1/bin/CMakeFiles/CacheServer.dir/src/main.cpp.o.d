@@ -2,9 +2,8 @@ CMakeFiles/CacheServer.dir/src/main.cpp.o: \
  /home/liuyixuan/learning/cpp/mprpc/day1/src/main.cpp \
  /usr/include/stdc-predef.h \
  /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/TcpServer.h \
- /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../cache/LRU.h \
- /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../cache/../utils/io.h \
- /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../cache/../utils/../core/IVectorData.h \
+ /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../network/Protocol.h \
+ /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../network/../core/IVectorData.h \
  /usr/include/netinet/in.h /usr/include/features.h \
  /usr/include/features-time64.h \
  /usr/include/x86_64-linux-gnu/bits/wordsize.h \
@@ -59,8 +58,7 @@ CMakeFiles/CacheServer.dir/src/main.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/types/struct_osockaddr.h \
  /usr/include/x86_64-linux-gnu/bits/socket2.h \
  /usr/include/x86_64-linux-gnu/bits/in.h \
- /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../cache/../utils/../core/../network/Protocol.h \
- /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../cache/../utils/../core/../network/../utils/Buffer.h \
+ /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../network/../utils/Buffer.h \
  /usr/include/c++/11/vector /usr/include/c++/11/bits/stl_algobase.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
@@ -211,7 +209,8 @@ CMakeFiles/CacheServer.dir/src/main.cpp.o: \
  /usr/include/c++/11/bits/atomic_base.h \
  /usr/include/c++/11/bits/atomic_lockfree_defines.h \
  /usr/include/c++/11/backward/auto_ptr.h \
- /usr/include/c++/11/pstl/glue_memory_defs.h /usr/include/c++/11/iostream \
+ /usr/include/c++/11/pstl/glue_memory_defs.h \
+ /usr/include/c++/11/shared_mutex /usr/include/c++/11/iostream \
  /usr/include/c++/11/ostream /usr/include/c++/11/ios \
  /usr/include/c++/11/bits/ios_base.h \
  /usr/include/c++/11/bits/locale_classes.h \
@@ -227,11 +226,9 @@ CMakeFiles/CacheServer.dir/src/main.cpp.o: \
  /usr/include/c++/11/bits/basic_ios.tcc \
  /usr/include/c++/11/bits/ostream.tcc /usr/include/c++/11/istream \
  /usr/include/c++/11/bits/istream.tcc \
- /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../cache/../utils/aof.h \
- /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../cache/../utils/../cache/Vector.h \
- /usr/include/assert.h \
- /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../cache/../utils/VectorFactory.h \
- /usr/include/signal.h \
+ /usr/include/x86_64-linux-gnu/sys/epoll.h \
+ /usr/include/x86_64-linux-gnu/bits/epoll.h /usr/include/c++/11/atomic \
+ /usr/include/c++/11/csignal /usr/include/signal.h \
  /usr/include/x86_64-linux-gnu/bits/signum-generic.h \
  /usr/include/x86_64-linux-gnu/bits/signum-arch.h \
  /usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h \
@@ -260,20 +257,4 @@ CMakeFiles/CacheServer.dir/src/main.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/ss_flags.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct_sigstack.h \
  /usr/include/x86_64-linux-gnu/bits/sigthread.h \
- /usr/include/x86_64-linux-gnu/bits/signal_ext.h \
- /usr/include/c++/11/queue /usr/include/c++/11/deque \
- /usr/include/c++/11/bits/stl_deque.h /usr/include/c++/11/bits/deque.tcc \
- /usr/include/c++/11/bits/stl_queue.h /usr/include/c++/11/atomic \
- /usr/include/c++/11/condition_variable /usr/include/c++/11/thread \
- /usr/include/c++/11/bits/std_thread.h \
- /usr/include/c++/11/bits/this_thread_sleep.h /usr/include/c++/11/fstream \
- /usr/include/c++/11/bits/codecvt.h \
- /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
- /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
- /usr/include/c++/11/bits/fstream.tcc /usr/include/c++/11/shared_mutex \
- /usr/include/c++/11/future /usr/include/c++/11/bits/atomic_futex.h \
- /usr/include/c++/11/list /usr/include/c++/11/bits/stl_list.h \
- /usr/include/c++/11/bits/list.tcc \
- /home/liuyixuan/learning/cpp/mprpc/day1/src/../include/network/../core/ThreadPool.h \
- /usr/include/x86_64-linux-gnu/sys/epoll.h \
- /usr/include/x86_64-linux-gnu/bits/epoll.h /usr/include/c++/11/csignal
+ /usr/include/x86_64-linux-gnu/bits/signal_ext.h
