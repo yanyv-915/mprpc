@@ -1,100 +1,139 @@
 import socket
 import struct
-import time
 import random
-import threading
-from enum import IntEnum
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# 与 C++ 服务端完全一致
-class OpCode(IntEnum):
+# ================= 配置区 =================
+HOST = '127.0.0.1'
+PORT = 8080
+MAGIC = 0x4647
+DIM = 4             # 需与服务端配置一致
+NUM_CLIENTS = 20    # 并发客户端数量（线程数）
+REQ_PER_CLIENT = 5000  # 每个客户端发送的请求数
+SET_RATIO = 1.0     # 写入操作占比 (0.9 代表 90% 是 SET, 10% 是 SEARCH)
+
+# ================= 协议定义 =================
+class OpCode:
     SET = 1
     GET = 2
     DEL = 3
     SEARCH = 4
 
-# 你服务端支持的3种数据类型 ✅
-class DataType(IntEnum):
-    FLOAT32 = 1    # float
-    INT16 = 2      # int16_t
-    UINT8 = 3      # uint8_t
-    UNKNOWN = 0
+class DataType:
+    FLOAT32 = 1
 
 class VectorClient:
-    def __init__(self, host='127.0.0.1', port=8080):
+    def __init__(self, host=HOST, port=PORT, magic=MAGIC):
         self.host = host
         self.port = port
-        self.magic = 0x4647
+        self.magic = magic
         self.sock = None
+        # 对应 C++ #pragma pack(1) 的 16 字节: magic(H), op(B), type(B), key(Q), dim(I)
+        self.header_struct = struct.Struct("<HBBQI") 
 
     def connect(self):
+        """长连接：只调用一次"""
         if self.sock is None:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            self.sock.settimeout(30.0)  # 长连接超时放大
             self.sock.connect((self.host, self.port))
 
-    # ------------------------------
-    # 3种发送函数，严格对应服务端类型
-    # ------------------------------
+    def _recv_exactly(self, n):
+        data = b''
+        while len(data) < n:
+            packet = self.sock.recv(n - len(data))
+            if not packet:
+                raise ConnectionError("连接被服务器关闭")
+            data += packet
+        return data
 
-    # 1. 发送 FLOAT32 (float)
-    def send_float(self, key_id, vector):
+    def set_vector(self, key_id, vector):
+        """复用连接发送 SET 请求"""
         dim = len(vector)
-        header = struct.pack("<HBBQI", self.magic, OpCode.SET, DataType.FLOAT32, key_id, dim)
+        header = self.header_struct.pack(self.magic, OpCode.SET, DataType.FLOAT32, key_id, dim)
         body = struct.pack(f"<{dim}f", *vector)
         self.sock.sendall(header + body)
-        return self.sock.recv(1024)
-
-    # 2. 发送 INT16 (int16_t)
-    def send_int16(self, key_id, vector):
-        dim = len(vector)
-        header = struct.pack("<HBBQI", self.magic, OpCode.SET, DataType.INT16, key_id, dim)
-        body = struct.pack(f"<{dim}h", *vector)  # h = int16_t
-        self.sock.sendall(header + body)
-        return self.sock.recv(1024)
-
-    # 3. 发送 UINT8 (uint8_t)
-    def send_uint8(self, key_id, vector):
-        dim = len(vector)
-        header = struct.pack("<HBBQI", self.magic, OpCode.SET, DataType.UINT8, key_id, dim)
-        body = struct.pack(f"<{dim}B", *vector)  # B = uint8_t
-        self.sock.sendall(header + body)
-        return self.sock.recv(1024)
-
-# ------------------------------------------------
-# 压测线程：你可以自由切换 send_float / send_int16 / send_uint8
-# ------------------------------------------------
-def worker(client, num_requests, dim):
-    client.connect()
-    for _ in range(num_requests):
-        key_id = random.getrandbits(64)
         
-        # ========== 选择一种发送 ==========
-        # 1. float
-        vec = [random.random() for _ in range(dim)]
-        client.send_float(key_id, vec)
+        resp = self._recv_exactly(16)
+        if resp:
+            res_header = self.header_struct.unpack(resp)
+            return res_header[3] == 1
+        return False
 
-        # 2. int16
-        # vec = [random.randint(-32768, 32767) for _ in range(dim)]
-        # client.send_int16(key_id, vec)
-
-        # 3. uint8
-        # vec = [random.randint(0, 255) for _ in range(dim)]
-        # client.send_uint8(key_id, vec)
+    def search(self, vector, top_k=3):
+        """复用连接发送 SEARCH 请求"""
+        dim = len(vector)
+        header = self.header_struct.pack(self.magic, OpCode.SEARCH, DataType.FLOAT32, top_k, dim)
+        body = struct.pack(f"<{dim}f", *vector)
+        self.sock.sendall(header + body)
         
+        resp = self._recv_exactly(16)
+        if not resp:
+            raise ConnectionError("接收响应头失败")
+        
+        res_header = self.header_struct.unpack(resp)
+        result_count = res_header[3]
+        # 读取结果向量（长连接必须读完，否则粘包）
+        if result_count > 0:
+            self._recv_exactly(result_count * dim * 4)
+        return True
+
+    def close(self):
+        """压测结束后统一关闭"""
+        if self.sock:
+            self.sock.close()
+            self.sock = None
+
+# ================= 压测逻辑 =================
+def worker(client_id):
+    """长连接核心：一个 client 一个连接，发完所有请求再关闭"""
+    client = VectorClient()
+    success = 0
+    try:
+        client.connect()  # 【只连接一次】
+        # 循环发送所有请求，不断开
+        for i in range(REQ_PER_CLIENT):
+            key = client_id * 1000000 + i
+            
+            if random.random() < SET_RATIO:
+                vec = [random.random() for _ in range(DIM)]
+                if client.set_vector(key, vec):
+                    success += 1
+            else:
+                query = [random.random() for _ in range(DIM)]
+                if client.search(query, top_k=3):
+                    success += 1
+    except Exception as e:
+        print(f"[!] 客户端 {client_id} 异常: {e}")
+    finally:
+        client.close()  # 【所有请求发完才关闭】
+    return success
+
+def run_test():
+    print(f"[*] 准备启动长连接压测...")
+    print(f"[*] 配置: {NUM_CLIENTS} 线程 | 每线程 {REQ_PER_CLIENT} 请求 | 写入占比 {SET_RATIO*100}%")
+    
+    start_time = time.perf_counter()
+    total_req = NUM_CLIENTS * REQ_PER_CLIENT
+    completed_req = 0
+    
+    with ThreadPoolExecutor(max_workers=NUM_CLIENTS) as executor:
+        futures = [executor.submit(worker, i) for i in range(NUM_CLIENTS)]
+        
+        for future in as_completed(futures):
+            completed_req += future.result()
+            
+    end_time = time.perf_counter()
+    duration = end_time - start_time
+    
+    print("\n" + "="*40)
+    print(f"长连接压测结果统计:")
+    print(f"总耗时     : {duration:.2f} 秒")
+    print(f"成功请求数 : {completed_req} / {total_req}")
+    print(f"平均 QPS   : {completed_req / duration:.2f}")
+    print(f"成功率     : {(completed_req / total_req)*100:.2f}%")
+    print("="*40)
+
 if __name__ == "__main__":
-    thread_count = 1
-    requests_per_thread = 101
-    dim = 4
-
-    start = time.time()
-    threads = []
-    for _ in range(thread_count):
-        client = VectorClient()
-        t = threading.Thread(target=worker, args=(client, requests_per_thread, dim))
-        threads.append(t)
-        t.start()
-
-    for t in threads:
-        t.join()
-
-    print(f"完成！QPS: {thread_count*requests_per_thread/(time.time()-start):.2f}")
+    run_test()

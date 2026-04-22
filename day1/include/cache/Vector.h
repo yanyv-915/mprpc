@@ -16,6 +16,7 @@ class VectorDataImpl : public IVectorData{
 private:
     std::vector<T> _data;
 public:
+    VectorDataImpl()=default;
     VectorDataImpl(std::vector<T>&& d):_data(std::move(d)){}
     VectorDataImpl(uint32_t dim){_data.resize(dim,0.0f);}
     float compute_l2(const IVectorData* other) const override {

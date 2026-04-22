@@ -1,5 +1,8 @@
 #include"../include/cache/LRU.h"
 #include"../include/utils/aof.h"
+#include"../include/core/IVectorData.h"
+#include"../include/network/Protocol.h"
+
 #include<algorithm>
 
 VectorCache::VectorCache(size_t cap):cap_single(cap),segments(SEGMENT_CNT){
@@ -32,11 +35,8 @@ bool VectorCache::checkDim(const shared_ptr<IVectorData>& vec){
 }
 
 void VectorCache::set(const uint64_t& key,const std::shared_ptr<IVectorData>& vec){
-    if(!vec){
-        throw std::invalid_argument("向量数据不能为nullptr");
-    }
     size_t seg_idx=key % MASK;
-    std::shared_lock<std::shared_mutex> lk(segments[seg_idx].mtx);
+    std::unique_lock<std::shared_mutex> lk(segments[seg_idx].mtx);
     auto it=segments[seg_idx].storage.find(key);
     auto& cur_seg=segments[seg_idx];
     if(it!=cur_seg.storage.end()){
@@ -85,8 +85,10 @@ void VectorCache::del(const uint64_t& key){
 }
 
 vector<shared_ptr<IVectorData>> VectorCache::search(const shared_ptr<IVectorData>& query,size_t topK){
+    size_t total_in_db = 0;
+    for(size_t i=0; i<SEGMENT_CNT; i++) total_in_db += segments[i].storage.size();
+    if(total_in_db % 10000 == 0)    std::cout << "DEBUG: Current total storage size: " << total_in_db << std::endl;
     vector<std::future<vector<SearchRes>>> futures;
-
     for(size_t i=0;i<SEGMENT_CNT;i++){
         futures.push_back(std::async(std::launch::async,[this,i,&query](){
             vector<SearchRes> local_res;
@@ -110,10 +112,18 @@ vector<shared_ptr<IVectorData>> VectorCache::search(const shared_ptr<IVectorData
     for(size_t i=0;i<std::min((size_t)all_candidates.size(),topK);i++){
         ans.push_back(all_candidates[i].vec);
     }
+    // // ... 之前的排序代码 ...
+    // printf("Debug: Found total %zu candidates, requested TopK %zu\n", all_candidates.size(), topK);
+    // for(size_t i=0; i < std::min(all_candidates.size(), (size_t)5); ++i) {
+    //     printf("  Rank %zu: dist = %f\n", i+1, all_candidates[i].distance);
+    // }
     return ans;
 }
 
-void VectorCache::handleRequest(const MessageHeader& header,shared_ptr<IVectorData>& vec,const size_t& fd){
+Response VectorCache::handleRequest(const MessageHeader& header,shared_ptr<IVectorData>& vec){
+    Response res{};
+    res.op=header.op;
+    res.dataType=header.dataType;
     switch (header.op)
     {
     case OpCode::SET:
@@ -126,12 +136,15 @@ void VectorCache::handleRequest(const MessageHeader& header,shared_ptr<IVectorDa
     case OpCode::DEL:
         del(header.key_id);
         break;
-    case OpCode::SEARCH:
-        
+    case OpCode::SEARCH:{
+        res.data=search(vec,header.key_id);
         break;
+    }
     default:
         break;
     }
+    res.success=true;
+    return res;
 }
 
 

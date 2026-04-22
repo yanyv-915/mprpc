@@ -35,5 +35,5 @@ set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "${CONDA_DIR}/lib
 
 target_link_directories(
     ${PROJECT_NAME} PRIVATE 
-    ${CMAKE_SOURCE_DIR}/inlcude
+    ${CMAKE_SOURCE_DIR}/include
 )

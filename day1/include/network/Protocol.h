@@ -1,10 +1,15 @@
 #pragma once
+#include"../core/IVectorData.h"
+#include"../utils/Buffer.h"
+
 #include<netinet/in.h>
 #include<vector>
-#include<string>
 #include<mutex>
-using std::mutex;
+#include<memory>
+#include<shared_mutex>
 
+using std::mutex;
+class IVectorData;
 enum class OpCode:uint8_t{
     SET = 1,
     GET = 2,
@@ -16,7 +21,8 @@ enum class OpCode:uint8_t{
 enum class DataType:uint8_t{
     FLOAT32 = 1,
     INT16 = 2,
-    BINARY = 3
+    BINARY = 3,
+    UNKONWN = 0,
 };
 
 #pragma pack(push,1)
@@ -31,13 +37,26 @@ struct MessageHeader{
 
 
 struct Client{
-    std::string readBuf;
+    Buffer readBuf;
+    Buffer writeBuf;
     bool headerParsed=false;
     MessageHeader curHeader;
-    mutex mtx;
-    Client(std::string buf , bool f, MessageHeader header){
-        readBuf=buf;
+    std::shared_mutex read_mtx;
+    std::shared_mutex write_mtx;
+    Client(bool f, MessageHeader header){
         headerParsed=f;
         curHeader=header;
     }
+};
+
+struct Response{
+    OpCode op;
+    bool success;
+    DataType dataType;
+    std::vector<std::shared_ptr<IVectorData>> data;
+    Response(){
+        op=OpCode::UNKNOWN;
+        dataType=DataType::UNKONWN;
+        success=false;
+    };
 };
