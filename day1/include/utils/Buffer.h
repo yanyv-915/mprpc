@@ -98,4 +98,12 @@ public:
         }
         return n;
     }
+
+    void ensureWritable(size_t len) {
+        if (writableBytes() < len) {
+            // 如果当前空间不足，一次性扩容
+            // 这里的扩容会触发一次系统调用申请内存，但后续的 append 就是纯内存移动了
+            buffer_.resize(write_index_ + len); 
+        }
+    }
 };

@@ -94,10 +94,11 @@ void Tcp::add_epoll(const int& fd,const uint32_t& event)
 }
 
 void Tcp::update_epoll(const int& fd,const uint32_t& event){
+    size_t idx=fd&this->SEGMENT_CNT;
     epoll_event ev;
     ev.data.fd=fd;
     ev.events=event|EPOLLET;
-    std::unique_lock<std::shared_mutex> lk(clients[fd]->write_mtx);
+    std::unique_lock<std::shared_mutex> lk(segments[idx].clients[fd]->write_mtx);
     if(epoll_ctl(epfd,EPOLL_CTL_MOD,fd,&ev) == -1){
         perror("epoll_ctl EPOLL_CTL_MOD failed");
     }
@@ -108,11 +109,12 @@ bool Tcp::add_client(int& fd){
     {
         return false;
     }
+    size_t idx=fd&SEGMENT_CNT;
     uint32_t event=EPOLLIN;
     add_epoll(fd,event);
-    std::unique_lock<mutex> lk(n_mtx);
+    std::unique_lock<std::shared_mutex> lk(segments[idx].mtx);
     MessageHeader header{};
-    clients[fd]=std::make_shared<Client>(false,header);
+    segments[idx].clients[fd]=std::make_shared<Client>(false,header);
     //cout<<"客户端"<<fd<<"成功连接！"<<endl;
     return true;
 }
@@ -126,6 +128,12 @@ void Tcp::serializeResponseToBuf(const Response& res,shared_ptr<Client>& clientP
     header.dataType=static_cast<DataType>(res.dataType);
     header.dim=clientPtr->curHeader.dim;
     if(header.op!=OpCode::SEARCH){
+        // 1. 提前计算总大小：Header + (结果数 * 向量大小)
+        size_t totalSize = sizeof(MessageHeader) + (res.data.size() * clientPtr->curHeader.dim * sizeof(float));
+        
+        // 2. 关键优化：确保 Buffer 内部有足够的连续空间，避免多次扩容
+        clientPtr->writeBuf.ensureWritable(totalSize);
+        
         header.key_id = res.success ? 1 : 0;
         const char* headerPtr=reinterpret_cast<const char*>(&header);
         clientPtr->writeBuf.append(headerPtr,sizeof(MessageHeader));
@@ -145,9 +153,10 @@ void Tcp::serializeResponseToBuf(const Response& res,shared_ptr<Client>& clientP
 
 void Tcp::handle_send(const int& fd){
     bool con_close=false;
-    std::unique_lock<mutex> lk_global(n_mtx);
-    auto it=clients.find(fd);
-    if(it==clients.end()) return;
+    size_t idx=fd& this->SEGMENT_CNT;
+    std::unique_lock<std::shared_mutex> lk_global(segments[idx].mtx);
+    auto it=segments[idx].clients.find(fd);
+    if(it==segments[idx].clients.end()) return;
     auto clientPtr=it->second;
     lk_global.unlock();
     std::unique_lock<std::shared_mutex> lk(clientPtr->write_mtx);
@@ -175,8 +184,8 @@ void Tcp::handle_send(const int& fd){
     lk.unlock();
     if (con_close)
     {
-        std::lock_guard<mutex> lk(n_mtx);
-        if(clients.erase(fd)>0){
+        std::lock_guard<std::shared_mutex> lk(segments[idx].mtx);
+        if(segments[idx].clients.erase(fd)>0){
             epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr);
             close(fd);
             return;
@@ -186,6 +195,7 @@ void Tcp::handle_send(const int& fd){
 }
 
 bool Tcp::praseMsg(const int& fd,shared_ptr<Client> client,VectorCache &cache,ThreadPool& pool){
+    size_t idx=fd & this->SEGMENT_CNT;
     const size_t HEADER_SIZE=sizeof(MessageHeader);
     int parseCount = 0;
     while(client->readBuf.readableBytes() >= HEADER_SIZE){
@@ -228,12 +238,12 @@ bool Tcp::praseMsg(const int& fd,shared_ptr<Client> client,VectorCache &cache,Th
             }
             auto clientPtr=client;
             MessageHeader taskHeader = client->curHeader;
-            pool.enqueue([vec,fd,&cache,clientPtr,taskHeader,this]() mutable{
+            pool.enqueue([vec,fd,&cache,clientPtr,taskHeader,idx,this]() mutable{
                 Response res=cache.handleRequest(taskHeader,vec);
                 serializeResponseToBuf(res,clientPtr);  
                 {
-                    std::lock_guard<mutex> lk_global(n_mtx);
-                    if (clients.find(fd) == clients.end()) {
+                    std::lock_guard<std::shared_mutex> lk_global(segments[idx].mtx);
+                    if (segments[idx].clients.find(fd) == segments[idx].clients.end()) {
                         return; // 客户端已经断开并被清理了，直接放弃写回
                     }
                 }
@@ -249,9 +259,10 @@ bool Tcp::praseMsg(const int& fd,shared_ptr<Client> client,VectorCache &cache,Th
 void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
 {
     int saveErrno = 0;
-    std::unique_lock<mutex> lk_gloabal(n_mtx);
-    auto it=clients.find(fd);
-    if(it==clients.end()) return;
+    size_t idx=fd & this->SEGMENT_CNT;
+    std::unique_lock<std::shared_mutex> lk_gloabal(segments[idx].mtx);
+    auto it=segments[idx].clients.find(fd);
+    if(it==segments[idx].clients.end()) return;
     auto client=it->second;
     lk_gloabal.unlock();
     bool con_close=false;
@@ -285,8 +296,8 @@ void Tcp::handle_read(const int &fd, VectorCache &cache,ThreadPool& pool)
     // 3. 最后统一执行清理逻辑
     if (con_close)
     {
-        std::lock_guard<mutex> lk(n_mtx);
-        if(clients.erase(fd)>0){
+        std::unique_lock<std::shared_mutex> lk_gloabal(segments[idx].mtx);
+        if(segments[idx].clients.erase(fd)>0){
             epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr);
             close(fd);
             //cout<<"客户端"<<std::to_string(fd)<<" 已经关闭!\n";

@@ -35,7 +35,7 @@ bool VectorCache::checkDim(const shared_ptr<IVectorData>& vec){
 }
 
 void VectorCache::set(const uint64_t& key,const std::shared_ptr<IVectorData>& vec){
-    size_t seg_idx=key % MASK;
+    size_t seg_idx=key & MASK;
     std::unique_lock<std::shared_mutex> lk(segments[seg_idx].mtx);
     auto it=segments[seg_idx].storage.find(key);
     auto& cur_seg=segments[seg_idx];
@@ -60,7 +60,7 @@ bool VectorCache::get(const uint64_t& key,std::shared_ptr<IVectorData>& vec){
         throw std::invalid_argument("向量数据不能为nullptr");
         return false;
     }
-    size_t seg_idx=key % MASK;
+    size_t seg_idx=key & MASK;
     std::shared_lock<std::shared_mutex> lk(segments[seg_idx].mtx);
     auto& cur_seg=segments[seg_idx];
     auto it=cur_seg.storage.find(key);
@@ -74,7 +74,7 @@ bool VectorCache::get(const uint64_t& key,std::shared_ptr<IVectorData>& vec){
 }
 
 void VectorCache::del(const uint64_t& key){
-    size_t seg_idx=key % MASK;
+    size_t seg_idx=key & MASK;
     std::shared_lock<std::shared_mutex> lk(segments[seg_idx].mtx);
     auto& cur_seg=segments[seg_idx];
     auto it=cur_seg.storage.find(key);

@@ -1,0 +1,17 @@
+# 向量数据库服务器配置
+server:
+  port: 8080
+  thread_pool_size: 8
+  max_connections: 1024
+
+storage:
+  aof_filename: "cache.aof"
+  # AOF 自动重写阈值 (MB)
+  rewrite_threshold_mb: 64
+  # 分段锁数量 (必须是 2 的幂)
+  segment_count: 16
+
+vector:
+  dimension: 128
+  data_type: "float32"
+  index_type: "IVFFlat" # 未来集成 Faiss 时用到

@@ -8,6 +8,7 @@
 #include <csignal>
 // 定义一个全局标志位
 static std::atomic<bool> g_running(true);
+using std::vector;
 #define MAX_EVENT 1024
 #define PORT 8080
 
@@ -16,10 +17,38 @@ class AofManager;
 class ThreadPool;
 class Tcp{
 private:
+    size_t SEGMENT_CNT=16;
+    size_t MASK=SEGMENT_CNT-1;
+    struct Segment{
+        std::shared_mutex mtx;
+        std::unordered_map<size_t,std::shared_ptr<Client>>clients;
+    };
+    vector<Segment>segments;
+public:
+    // 在 TcpServer 类中初始化
+    Tcp():segments(SEGMENT_CNT) {}
+
+    // 获取 Client 的安全方式
+    std::shared_ptr<Client> get_client(int fd) {
+        size_t idx = fd & MASK;
+        std::shared_lock lk(segments[idx].mtx); // 读锁，多个线程可以同时获取不同或相同的 Client
+        auto it = segments[idx].clients.find(fd);
+        return (it != segments[idx].clients.end()) ? it->second : nullptr;
+    }
+    // 删除 Client 的安全方式
+    void remove_client(int fd) {
+        size_t idx = fd & MASK;
+        std::unique_lock lk(segments[idx].mtx); // 写锁，确保删除时的排他性
+        segments[idx].clients.erase(fd);
+    }
+private:
+    std::atomic<uint64_t> total_qps;
+    std::atomic<uint64_t> search_latency_ms;
+    std::atomic<uint64_t> active_connections;
+private:
     int listen_fd,epfd;
-    std::unordered_map<size_t,std::shared_ptr<Client>>clients;
+    
     epoll_event ev,events[MAX_EVENT];
-    mutex n_mtx;
     void serializeResponseToBuf(const Response& res, std::shared_ptr<Client>& clientPtr);
 public:
     static void handle_sigint(int sig) {

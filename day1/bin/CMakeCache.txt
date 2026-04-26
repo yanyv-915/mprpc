@@ -224,6 +224,12 @@ CacheServer_IS_TOP_LEVEL:STATIC=ON
 //Value Computed by CMake
 CacheServer_SOURCE_DIR:STATIC=/home/liuyixuan/learning/cpp/mprpc/day1
 
+//Path to a library.
+FAISS_LIB:FILEPATH=/home/liuyixuan/miniconda3/envs/faiss_lab/lib/libfaiss.so
+
+//Path to a library.
+YAML_LIB:FILEPATH=/home/liuyixuan/miniconda3/envs/faiss_lab/lib/libyaml-cpp.so
+
 
 ########################
 # INTERNAL cache entries
